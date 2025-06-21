@@ -40,7 +40,7 @@ async fn pull_from_devin(config_dir: &str, verbose: bool) -> Result<(), DevinErr
     let relevant_knowledge: Vec<_> = response
         .knowledge
         .into_iter()
-        .filter(|knowledge| is_relevant_to_project(&knowledge, &folder_names))
+        .filter(|knowledge| is_relevant_to_project(knowledge, &folder_names))
         .collect();
 
     if verbose {
