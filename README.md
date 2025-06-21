@@ -30,7 +30,7 @@ dozo push --force
 This generates:
 - **Cursor**: Copies your hierarchy to `.cursor/rules/` (converts `.md` → `.mdc`)
 - **Claude**: Combines content into `CLAUDE.md` + copies `commands/` to `.claude/commands/`
-- **Devin**: Syncs with Devin via API (when implemented)
+- **Devin**: ⚠️ **Push not yet implemented** (only pull is currently supported)
 
 ### Pull configuration from tools
 
@@ -38,18 +38,58 @@ This generates:
 # Pull from existing tool configurations
 dozo pull --from cursor
 dozo pull --from claude
+dozo pull --from devin    # Pulls knowledge from Devin API (requires DEVIN_API_KEY)
 
 # Merge with existing configuration
 dozo pull --from cursor --merge
+dozo pull --from claude --merge
+dozo pull --from devin --merge
 ```
 
-### Check synchronization status
+**Note**: The Devin pull feature requires the `DEVIN_API_KEY` environment variable to be set for API authentication.
+
+### Cross-tool knowledge integration
+
+One of Dozo's key features is **cross-tool knowledge integration**. When you pull knowledge from different tools, you can then push the combined knowledge to other tools:
 
 ```bash
-dozo status
+# Pull knowledge from multiple sources
+dozo pull --from devin    # API knowledge → .agentic-coding/devin/
+dozo pull --from cursor   # Existing rules → .agentic-coding/cursor/
+
+# Push combined knowledge to Claude (includes all sources)
+dozo push --target claude # All knowledge combined → CLAUDE.md
 ```
 
-Shows the current state of all tool configurations and when they were last updated.
+## Real-world Example
+
+Here's a typical workflow showing the cross-tool integration:
+
+```bash
+# 1. Start with manual project rules
+echo "# Security Rules\nAlways validate input" > .agentic-coding/security.md
+
+# 2. Pull relevant knowledge from Devin API  
+export DEVIN_API_KEY="your_api_key"
+dozo pull --from devin
+# → Creates .agentic-coding/devin/Project_Guidelines.md, etc.
+
+# 3. Pull existing Cursor configuration
+dozo pull --from cursor  
+# → Creates .agentic-coding/cursor/existing_rules.md
+
+# 4. Now push the COMBINED knowledge to Claude
+dozo push --target claude
+# → CLAUDE.md contains:
+#   - Your manual security.md
+#   - All relevant Devin knowledge  
+#   - All Cursor rules
+#   - Properly organized with section headers
+
+# 5. Also make it available to Cursor in .mdc format
+dozo push --target cursor
+# → .cursor/rules/ contains all knowledge in .mdc format
+```
 
 ## Installation
 
@@ -94,36 +134,52 @@ Create a `.agentic-coding/` directory in your project root and add your markdown
 ```
 my-project/
 ├── .agentic-coding/           # Configuration directory
-│   ├── config.yaml           # Main configuration
-│   ├── general/              # General rules
+│   ├── general/              # Manual rules
 │   │   ├── coding-style.md
 │   │   └── security.md
-│   ├── frontend/             # Frontend-specific rules
+│   ├── frontend/             # Manual rules
 │   │   ├── react-rules.md
 │   │   └── styling.md
-│   └── commands/             # Claude commands (optional)
+│   ├── devin/               # From: dozo pull --from devin
+│   │   ├── Knowledge_Item_1.md
+│   │   └── Knowledge_Item_2.md
+│   ├── cursor/              # From: dozo pull --from cursor  
+│   │   └── existing-rules.md
+│   └── commands/            # Claude commands (optional)
 │       ├── deploy.md
 │       └── test.md
-└── src/                      # Your project files
+└── src/                     # Your project files
 ```
 
 ### Output Structure
 
 ```
 my-project/
-├── .cursor/rules/            # Cursor hierarchy (mirrors input)
+├── .cursor/rules/            # dozo push --target cursor
 │   ├── general/
-│   │   ├── coding-style.mdc  # Converted to .mdc
+│   │   ├── coding-style.mdc  # From manual rules
 │   │   └── security.mdc
-│   └── frontend/
-│       ├── react-rules.mdc
-│       └── styling.mdc
+│   ├── frontend/
+│   │   ├── react-rules.mdc   # From manual rules
+│   │   └── styling.mdc
+│   ├── devin/               # From pulled Devin knowledge
+│   │   ├── Knowledge_Item_1.mdc
+│   │   └── Knowledge_Item_2.mdc
+│   └── cursor/              # From pulled Cursor rules
+│       └── existing-rules.mdc
 ├── .claude/commands/         # Claude commands (if commands/ exists)
 │   ├── deploy.md
 │   └── test.md
-├── CLAUDE.md                 # Combined content for Claude
-└── devin-knowledge.json      # Devin backup (placeholder)
+└── CLAUDE.md                 # dozo push --target claude
+                              # Contains ALL: manual + devin + cursor knowledge
 ```
+
+**Key Feature**: `CLAUDE.md` includes content from:
+- `general/coding-style.md` (manual)
+- `frontend/react-rules.md` (manual)  
+- `devin/Knowledge_Item_1.md` (from Devin API)
+- `cursor/existing-rules.md` (from Cursor pull)
+- Everything except `commands/` directory
 
 ## How it works
 
@@ -138,14 +194,28 @@ my-project/
 ### Tool-Specific Generation
 
 - **Cursor**: Preserves your directory structure in `.cursor/rules/` and converts `.md` files to `.mdc` format
-- **Claude**: Combines all non-command files into `CLAUDE.md` + copies `commands/` separately
-- **Devin**: Creates JSON backup file (API integration planned)
+- **Claude**: Combines **all** markdown files (including those from `devin/`, `cursor/` subdirectories) into `CLAUDE.md` + copies `commands/` separately
+- **Devin**: 
+  - **Push**: ⚠️ Not yet implemented
+  - **Pull**: Fetches knowledge from Devin API, filters by project relevance, saves as individual `.md` files in `.agentic-coding/devin/`
+
+### Cross-Tool Integration
+
+The key innovation is that when you push to any tool, **all knowledge sources are included**:
+- Your manually created `.md` files
+- Knowledge pulled from Devin (in `devin/` directory)
+- Rules pulled from Cursor (in `cursor/` directory)
+- Any other tool-specific knowledge
+
+This means you can pull knowledge from Devin and immediately make it available to Claude and Cursor.
 
 ### Benefits
 
-- **Hierarchical**: Organize rules by domain, feature, or any structure that makes sense
-- **Consistent**: Same rules everywhere, formatted appropriately for each tool
-- **Flexible**: Each tool gets the format it expects while you maintain a single source
+- **Cross-Tool Knowledge Sharing**: Pull knowledge from any tool and make it available to all others
+- **Unified Knowledge Base**: All your coding standards in one place, regardless of source
+- **Tool-Specific Formatting**: Each tool gets the format it expects (.mdc, combined .md, etc.)
+- **Project-Aware Filtering**: Devin pull automatically filters for project-relevant knowledge
+- **Hierarchical Organization**: Organize rules by domain, feature, or any structure that makes sense
 
 ## Development
 

@@ -33,8 +33,6 @@ pub enum Commands {
         #[arg(long)]
         merge: bool,
     },
-
-    Status,
 }
 
 impl Cli {
@@ -75,14 +73,19 @@ mod tests {
     fn test_cli_parsing() {
         use clap::Parser;
 
-        let cli = Cli::try_parse_from(["dozo", "status"]).unwrap();
-        assert!(matches!(cli.command, Commands::Status { .. }));
         let cli = Cli::try_parse_from(["dozo", "--verbose", "push", "--target", "cursor"]).unwrap();
         assert!(cli.verbose);
         if let Commands::Push { target, .. } = cli.command {
             assert_eq!(target, "cursor");
         } else {
             panic!("Expected Push command");
+        }
+
+        let cli = Cli::try_parse_from(["dozo", "pull", "--from", "devin"]).unwrap();
+        if let Commands::Pull { from, .. } = cli.command {
+            assert_eq!(from, "devin");
+        } else {
+            panic!("Expected Pull command");
         }
     }
 }

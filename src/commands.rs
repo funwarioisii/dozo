@@ -1,6 +1,5 @@
 pub mod pull;
 pub mod push;
-pub mod status;
 pub mod utils;
 
 use crate::cli::Commands;
@@ -14,6 +13,5 @@ pub async fn execute_command(command: Commands, config_dir: &str, verbose: bool)
         Commands::Pull { from, merge } => {
             pull::pull_command(config_dir, &from, merge, verbose).await
         }
-        Commands::Status => status::status_command(config_dir, verbose).await,
     }
 }

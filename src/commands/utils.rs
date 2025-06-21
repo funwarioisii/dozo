@@ -145,7 +145,10 @@ pub fn read_and_combine_markdown_files(config_dir: &str) -> Result<String> {
 
     let mut files = find_markdown_files(config_path)?
         .into_iter()
-        .filter(|path| !path.components().any(|c| c.as_os_str() == "commands"))
+        .filter(|path| {
+            // commands ディレクトリのみ除外（devin, cursor, claude は含める）
+            !path.components().any(|c| c.as_os_str() == "commands")
+        })
         .collect::<Vec<_>>();
 
     files.sort();
@@ -350,5 +353,39 @@ mod tests {
         assert!(result.contains("API content"));
         assert!(result.contains("## Backend / Api Rules"));
         assert!(result.contains("## Frontend / React Rules"));
+    }
+
+    #[test]
+    fn test_read_and_combine_markdown_files_includes_tool_dirs() {
+        let temp_dir = TempDir::new().unwrap();
+        let config_dir = temp_dir.path();
+
+        // 手動作成ファイル
+        create_test_file(config_dir, "general.md", "General rules").unwrap();
+
+        // ツールディレクトリのファイル（含まれるべき）
+        create_test_file(config_dir, "devin/knowledge1.md", "Devin knowledge 1").unwrap();
+        create_test_file(config_dir, "cursor/rules1.md", "Cursor rules").unwrap();
+        create_test_file(config_dir, "claude/claude-rules.md", "Claude rules").unwrap();
+
+        // commandsディレクトリのファイル（除外されるべき）
+        create_test_file(config_dir, "commands/deploy.md", "Deploy command").unwrap();
+
+        let result = read_and_combine_markdown_files(config_dir.to_str().unwrap()).unwrap();
+
+        // 含まれるべきもの
+        assert!(result.contains("General rules"));
+        assert!(result.contains("Devin knowledge 1"));
+        assert!(result.contains("Cursor rules"));
+        assert!(result.contains("Claude rules"));
+
+        // 除外されるべきもの
+        assert!(!result.contains("Deploy command"));
+
+        // セクションタイトルの確認
+        assert!(result.contains("## General"));
+        assert!(result.contains("## Devin / Knowledge1"));
+        assert!(result.contains("## Cursor / Rules1"));
+        assert!(result.contains("## Claude / Claude Rules"));
     }
 }
