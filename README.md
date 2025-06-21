@@ -8,9 +8,63 @@ A unified CLI tool for managing coding agent configurations across Cursor, Claud
 
 Dozo centralizes prompt and rule management for different coding agents. Instead of maintaining separate configuration files for each tool, you write your coding standards once and sync them everywhere.
 
-Create a `.agentic-coding/` directory in your project with your configuration files, then use Dozo to sync them to your tools. **Dozo supports hierarchical directory structures** - organize your rules in subdirectories and Dozo will handle the rest.
+The key innovation is **cross-tool knowledge integration** - pull knowledge from any tool and make it available to all others.
+
+
+## Installation
+
+```bash
+cargo install --git https://github.com/funwarioisii/dozo
+```
+
+
+## Quick Start
+
+Here's a typical workflow showing what Dozo can do:
+
+```bash
+# 1. Pull relevant knowledge from Devin API  
+export DEVIN_API_KEY="your_api_key"
+dozo pull --from devin
+# → Creates .agentic-coding/devin/Project_Guidelines.md, etc.
+
+# 2. Pull existing Cursor configuration
+dozo pull --from cursor  
+# → Creates .agentic-coding/cursor/existing_rules.md
+
+# 3. Add your own manual rules (optional)
+echo "# Security Rules\nAlways validate input" > .agentic-coding/security.md
+
+# 4. Now push the COMBINED knowledge to Claude
+dozo push --target claude
+# → CLAUDE.md contains:
+#   - All relevant Devin knowledge  
+#   - All Cursor rules
+#   - Your manual security.md
+#   - Properly organized with section headers
+
+# 5. Also make it available to Cursor in .mdc format
+dozo push --target cursor
+# → .cursor/rules/ contains all knowledge in .mdc format
+```
 
 ## Usage
+
+### Pull configuration from tools
+
+```bash
+# Pull from existing tool configurations
+dozo pull --from cursor
+dozo pull --from claude
+dozo pull --from devin    # Pulls knowledge from Devin API (requires DEVIN_API_KEY)
+
+# Merge with existing configuration
+dozo pull --from cursor --merge
+dozo pull --from claude --merge
+dozo pull --from devin --merge
+```
+
+**Note**: The Devin pull feature requires the `DEVIN_API_KEY` environment variable to be set for API authentication.
 
 ### Push configuration to tools
 
@@ -29,24 +83,8 @@ dozo push --force
 
 This generates:
 - **Cursor**: Copies your hierarchy to `.cursor/rules/` (converts `.md` → `.mdc`)
-- **Claude**: Combines content into `CLAUDE.md` + copies `commands/` to `.claude/commands/`
+- **Claude**: Combines **all** content (manual + pulled knowledge) into `CLAUDE.md` + copies `commands/` to `.claude/commands/`
 - **Devin**: ⚠️ **Push not yet implemented** (only pull is currently supported)
-
-### Pull configuration from tools
-
-```bash
-# Pull from existing tool configurations
-dozo pull --from cursor
-dozo pull --from claude
-dozo pull --from devin    # Pulls knowledge from Devin API (requires DEVIN_API_KEY)
-
-# Merge with existing configuration
-dozo pull --from cursor --merge
-dozo pull --from claude --merge
-dozo pull --from devin --merge
-```
-
-**Note**: The Devin pull feature requires the `DEVIN_API_KEY` environment variable to be set for API authentication.
 
 ### Cross-tool knowledge integration
 
@@ -59,53 +97,6 @@ dozo pull --from cursor   # Existing rules → .agentic-coding/cursor/
 
 # Push combined knowledge to Claude (includes all sources)
 dozo push --target claude # All knowledge combined → CLAUDE.md
-```
-
-## Real-world Example
-
-Here's a typical workflow showing the cross-tool integration:
-
-```bash
-# 1. Start with manual project rules
-echo "# Security Rules\nAlways validate input" > .agentic-coding/security.md
-
-# 2. Pull relevant knowledge from Devin API  
-export DEVIN_API_KEY="your_api_key"
-dozo pull --from devin
-# → Creates .agentic-coding/devin/Project_Guidelines.md, etc.
-
-# 3. Pull existing Cursor configuration
-dozo pull --from cursor  
-# → Creates .agentic-coding/cursor/existing_rules.md
-
-# 4. Now push the COMBINED knowledge to Claude
-dozo push --target claude
-# → CLAUDE.md contains:
-#   - Your manual security.md
-#   - All relevant Devin knowledge  
-#   - All Cursor rules
-#   - Properly organized with section headers
-
-# 5. Also make it available to Cursor in .mdc format
-dozo push --target cursor
-# → .cursor/rules/ contains all knowledge in .mdc format
-```
-
-## Installation
-
-### From source
-
-```bash
-git clone https://github.com/your-org/dozo
-cd dozo/dozo-rs
-cargo build --release
-cargo install --path .
-```
-
-### Using cargo
-
-```bash
-cargo install dozo
 ```
 
 ## Configuration
@@ -208,14 +199,6 @@ The key innovation is that when you push to any tool, **all knowledge sources ar
 - Any other tool-specific knowledge
 
 This means you can pull knowledge from Devin and immediately make it available to Claude and Cursor.
-
-### Benefits
-
-- **Cross-Tool Knowledge Sharing**: Pull knowledge from any tool and make it available to all others
-- **Unified Knowledge Base**: All your coding standards in one place, regardless of source
-- **Tool-Specific Formatting**: Each tool gets the format it expects (.mdc, combined .md, etc.)
-- **Project-Aware Filtering**: Devin pull automatically filters for project-relevant knowledge
-- **Hierarchical Organization**: Organize rules by domain, feature, or any structure that makes sense
 
 ## Development
 
