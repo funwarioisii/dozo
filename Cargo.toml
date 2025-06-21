@@ -1,0 +1,25 @@
+[package]
+name = "dozo"
+version = "0.1.0"
+edition = "2021"
+description = "A unified CLI tool for managing coding agent configurations"
+license = "MIT"
+authors = ["Your Name <email@example.com>"]
+
+[[bin]]
+name = "dozo"
+path = "src/main.rs"
+
+[dependencies]
+clap = { version = "4.4", features = ["derive"] }
+serde_json = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+tokio = { version = "1.0", features = ["full"] }
+anyhow = "1.0"
+chrono = { version = "0.4", features = ["serde"] }
+walkdir = "2.4"
+reqwest = { version = "0.11", features = ["json"] }
+thiserror = "1.0"
+
+[dev-dependencies]
+tempfile = "3.8"
